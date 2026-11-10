@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projet d'établissement — Lycée franco-chypriote de Nicosie</title>
+  <meta name="description" content="Espace collaboratif du projet d'établissement du Lycée franco-chypriote de Nicosie : travail en groupes par axe.">
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="projet.css">
+</head>
+<body class="pe-body">
+  <header class="pe-hero">
+    <div class="pe-hero-row">
+      <span></span>
+      <div class="pe-hero-title">
+        <span class="pe-eyebrow">Lycée franco-chypriote de Nicosie</span>
+        <h1>Projet d'établissement</h1>
+        <p>Quatre axes, des groupes de travail, une réflexion partagée.</p>
+      </div>
+      <img src="assets/logo-aefe.png" alt="AEFE" class="pe-logo">
+    </div>
+  </header>
+
+  <nav class="pe-tabs" aria-label="Espaces du projet d'établissement">
+    <span class="pe-back"></span>
+    <button class="pe-tab active" data-tab="travail" type="button">✍️ Travail</button>
+    <button class="pe-tab" data-tab="admin" type="button">🔐 Administration</button>
+    <span class="pe-sync" id="peSync" aria-live="polite"></span>
+  </nav>
+
+  <main class="pe-main">
+    <section class="pe-view visible" id="view-travail" data-view="travail"></section>
+    <section class="pe-view" id="view-admin" data-view="admin"></section>
+  </main>
+
+  <div class="pe-toast" id="peToast" role="status" aria-live="polite"></div>
+  <script src="projet.js"></script>
+</body>
+</html>
