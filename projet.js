@@ -224,14 +224,11 @@
         if (adminCode) await loadAdmin();
       } else if (step === 'work' && session) {
         await loadGroup();
-      } else {
-        await refreshSlots();
       }
       setSync('Synchronisé à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) {
       if (step === 'work' && /Accès refusé|introuvable/i.test(e.message)) {
         leaveGroup(); flash.travail = { type: 'error', text: 'Ce groupe n\'est plus accessible (supprimé ou code modifié). Choisis ton groupe à nouveau.' };
-        try { await refreshSlots(); } catch (e2) { /* ignore */ }
       } else {
         setSync('⚠️ ' + e.message, true);
       }
@@ -370,39 +367,36 @@
       <p>L'objectif : faire émerger des propositions concrètes et réalistes. Vous pouvez écrire en français, en grec ou en anglais. Votre travail n'est visible que de votre groupe et de l'équipe de coordination.</p>
     </details>`;
 
-  /* Étape 1 : choisir l'axe et le groupe */
+  /* Étape 1 : choisir l'axe (le groupe est créé automatiquement) */
   function renderChooser() {
-    const blocks = AXES.map(a => {
-      const cards = Array.from({ length: GROUPS_PER_AXE }, (_, i) => {
-        const n = i + 1;
-        const s = slotOf(a.n, n);
-        return `
-          <div class="pe-slot ${s ? 'taken' : ''}">
-            <b>Groupe ${n}</b>
-            <small>${s ? (s.statut === 'Terminé' ? '✅ Travail envoyé' : '🟡 Déjà ouvert') : 'Libre'}</small>
-            <div class="pe-slot-actions">
-              <button class="btn ${s ? 'secondary' : 'primary'} small" data-action="pick-slot" data-axe="${a.n}" data-num="${n}" type="button">${s ? 'Reprendre mon groupe' : 'Ouvrir ce groupe'}</button>
-            </div>
-          </div>`;
-      }).join('');
-      return `<div class="pe-axe-block"><h3>Axe ${a.n} — ${h(a.court)}</h3><div class="pe-slots">${cards}</div></div>`;
-    }).join('');
-
+    const cards = AXES.map(a => `
+      <div class="pe-slot">
+        <b>Axe ${a.n}</b>
+        <small>${h(a.titre)}</small>
+        <div class="pe-slot-actions"><button class="btn primary small" data-action="pick-axe" data-axe="${a.n}" type="button">Travailler sur cet axe</button></div>
+      </div>`).join('');
     return `
       <div class="pe-card">
         <span class="pe-eyebrow" style="color:var(--magenta)">Étape 1 sur 2</span>
-        <h2>Choisis ton axe et ton groupe</h2>
-        <p class="pe-lead">Sur quel axe veux-tu travailler ? Ouvre un groupe libre, ou reprends le tien avec son code. Tu indiqueras ensuite les personnes qui travaillent sur cet ordinateur.</p>
+        <h2>Sur quel axe travaillez-vous ?</h2>
+        <p class="pe-lead">Cliquez sur votre axe : votre groupe est créé automatiquement. Vous indiquerez ensuite qui travaille sur cet ordinateur.</p>
         ${renderFlash('travail')}
         ${METHODE}
-        ${blocks}
+        <div class="pe-slots">${cards}</div>
+        <details class="pe-method" style="margin-top:18px" ${flash.travail ? "open" : ""}><summary>🔑 Reprendre un groupe déjà commencé</summary>
+          <form id="resumeForm" class="pe-row" autocomplete="off" style="margin-top:10px">
+            <label>Axe<select name="axe">${AXES.map(a => `<option value="${a.n}">Axe ${a.n}</option>`).join('')}</select></label>
+            <label>N° du groupe<input type="number" name="numero" min="1" max="99" required data-ignore-pending></label>
+            <label>Code de reprise<input type="text" name="pin" required maxlength="30" data-ignore-pending></label>
+            <button class="btn secondary" type="submit">Reprendre</button>
+          </form>
+        </details>
       </div>`;
   }
 
   /* Étape 2 : qui est devant l'écran + code du groupe */
   function renderWho() {
-    const taken = !!slotOf(slot.axe, slot.numero);
-    const known = editingPresent && grp ? (grp.groupe.membres || []).map(fullName) : [];
+        const known = editingPresent && grp ? (grp.groupe.membres || []).map(fullName) : [];
     const all = [...new Set(known.concat(draft))];
     const chips = all.length ? all.map(n => `
       <button class="pe-person ${draft.includes(n) ? 'on' : ''}" data-action="toggle-person" data-name="${h(n)}" type="button">${draft.includes(n) ? '✅' : '＋'} ${h(n)}</button>`).join('')
@@ -411,9 +405,9 @@
 
     return `
       <div class="pe-card">
-        <button class="pe-link" data-action="back-choose" type="button">← Changer de groupe</button>
+        <button class="pe-link" data-action="back-choose" type="button">← Changer d'axe</button>
         <span class="pe-eyebrow" style="color:var(--magenta);display:block;margin-top:8px">Étape 2 sur 2</span>
-        <h2>Axe ${h(slot.axe)} · Groupe ${h(slot.numero)}</h2>
+        <h2>Axe ${h(slot.axe)}</h2>
         <p class="pe-lead"><b>${h(a.titre)}</b></p>
         <p class="pe-lead">Qui travaille <b>sur cet ordinateur</b> ? Écris un prénom, un nom ou un pseudonyme : comme tu préfères.</p>
         <div class="pe-people">${chips}</div>
@@ -421,14 +415,6 @@
           <label style="flex:2 1 260px">Prénom, nom ou pseudonyme<input type="text" name="nom" maxlength="80" data-ignore-pending></label>
           <button class="btn secondary" type="submit">➕ Ajouter</button>
         </form>
-        ${editingPresent ? '' : `
-        <div class="pe-codebox">
-          <label>${taken ? '🔑 Code du groupe' : '🔑 Choisis un code pour ce groupe (4 caractères minimum)'}
-            <input type="text" id="pinInput" maxlength="30" autocomplete="off" data-ignore-pending placeholder="${taken ? 'Le code choisi à l\'ouverture' : 'Ex. : 4821 ou un mot'}"></label>
-          <p class="pe-hint">${taken
-            ? 'Ce groupe est déjà ouvert : seul le code permet d\'y entrer. Pas de code ? Choisis un autre groupe.'
-            : 'Ce code protège le travail de ton groupe : personne d\'autre ne pourra l\'ouvrir. Note-le : il permet de retrouver le groupe depuis un autre ordinateur.'}</p>
-        </div>`}
         ${renderFlash('travail')}
         <div class="pe-actions">
           <button class="btn primary" data-action="start-work" type="button" ${draft.length ? '' : 'disabled'}>${editingPresent ? 'Enregistrer' : 'Commencer à travailler'} (${draft.length}) →</button>
@@ -547,6 +533,7 @@
           <div>
             <button class="pe-link" data-action="leave-group" type="button">← Quitter ce groupe</button>
             <h2>${h(groupLabel(g))}</h2>
+            <p class="pe-hint" style="margin:2px 0 6px">🔑 <b>Pour reprendre plus tard</b> (autre ordinateur ou après fermeture) : axe ${h(g.axe)}, groupe n° ${h(g.numero)}, code <b>${h(session.pin)}</b>. Notez-le.</p>
             <p class="pe-lead" style="margin:0">${h(axeOf(g.axe).titre)}</p>
             <div class="pe-chips">${names}</div>
           </div>
@@ -644,11 +631,11 @@
           adminContribs(g, r).forEach(c => lines.push({ g, c }));
         });
         return `<div class="pe-adm-item"><h4>${t.n}. ${h(t.titre)} <span class="pe-by">(${lines.length})</span></h4>
-          ${lines.length ? lines.map(({ g, c }) => `<div class="pe-r" style="margin-left:0">${c.guide ? `<div class="pe-by"><i>${h(c.guide)}</i></div>` : ''}<div class="pe-txt">${h(c.texte)}</div><div class="pe-by"><b>Groupe ${g.numero}</b> · ${h(c.auteur)}</div></div>`).join('') : '<div class="pe-empty">Aucune contribution.</div>'}</div>`;
+          ${lines.length ? lines.map(({ g, c }) => `<div class="pe-r" style="margin-left:0">${c.guide ? `<div class="pe-by"><i>${h(c.guide)}</i></div>` : ''}<div class="pe-txt">${h(c.texte)}</div><div class="pe-by"><b>Groupe ${g.numero}</b> · ${h(c.auteur)} <button class="pe-link danger" data-action="admin-del-contrib" data-gid="${h(g.id)}" data-id="${h(c.id)}" type="button">Supprimer</button></div></div>`).join('') : '<div class="pe-empty">Aucune contribution.</div>'}</div>`;
       }).join('');
       const extras = [];
       gs.forEach(g => rubriques.filter(r => r.groupeId === g.id && r.ordre === '').forEach(r => adminContribs(g, r).forEach(c => extras.push({ g, r, c }))));
-      const extraHtml = extras.length ? `<div class="pe-adm-item"><h4>Autres rubriques ajoutées <span class="pe-by">(${extras.length})</span></h4>${extras.map(({ g, r, c }) => `<div class="pe-r" style="margin-left:0"><div class="pe-by"><i>${h(r.titre)}</i></div><div class="pe-txt">${h(c.texte)}</div><div class="pe-by"><b>Groupe ${g.numero}</b> · ${h(c.auteur)}</div></div>`).join('')}</div>` : '';
+      const extraHtml = extras.length ? `<div class="pe-adm-item"><h4>Autres rubriques ajoutées <span class="pe-by">(${extras.length})</span></h4>${extras.map(({ g, r, c }) => `<div class="pe-r" style="margin-left:0"><div class="pe-by"><i>${h(r.titre)}</i></div><div class="pe-txt">${h(c.texte)}</div><div class="pe-by"><b>Groupe ${g.numero}</b> · ${h(c.auteur)} <button class="pe-link danger" data-action="admin-del-contrib" data-gid="${h(g.id)}" data-id="${h(c.id)}" type="button">Supprimer</button></div></div>`).join('')}</div>` : '';
       return `
         <details class="pe-resto-group" ${adminAxe === 'all' ? '' : 'open'}>
           <summary>Axe ${a.n} — ${h(a.court)} <span class="pe-by">· ${gs.length} groupe${gs.length > 1 ? 's' : ''}, ${nb} contribution${nb > 1 ? 's' : ''}</span></summary>
@@ -725,8 +712,8 @@
       case 'print': return window.print();
 
       /* ----- choix du groupe ----- */
-      case 'pick-slot':
-        slot = { axe: Number(btn.dataset.axe), numero: Number(btn.dataset.num) };
+      case 'pick-axe':
+        slot = { axe: Number(btn.dataset.axe) };
         draft = []; editingPresent = false; flash.travail = null; step = 'who';
         return renderAll();
       case 'back-choose':
@@ -740,19 +727,22 @@
       }
       case 'start-work': {
         if (!draft.length || !slot) return;
-        const pin = editingPresent ? session.pin : (($('#pinInput') || {}).value || '').trim();
-        if (!editingPresent && pin.length < 4) { flash.travail = { type: 'error', text: 'Le code du groupe doit comporter au moins 4 caractères.' }; return renderAll(); }
         btn.disabled = true;
         try {
-          const out = await apiPost({ action: 'pe_joinOrCreate', axe: slot.axe, numero: slot.numero, pin, membres: draft.map(n => ({ prenom: n, nom: '' })) });
-          session = { groupId: out.groupId, pin, axe: slot.axe, numero: slot.numero };
-          store.set('pe_session', session);
-          present = draft.slice(); store.set('pe_present_' + session.groupId, present);
-          activeAuthor = present.length === 1 ? present[0] : null;
-          await loadGroup();
-          if (!timer) loadTimer();
+          let out;
+          if (editingPresent) {
+            out = await apiPost(gp({ action: 'pe_setMembers', membres: draft.map(n => ({ prenom: n, nom: '' })) }));
+            present = draft.slice(); store.set('pe_present_' + session.groupId, present);
+            await loadGroup();
+          } else {
+            out = await apiPost({ action: 'pe_createGroup', axe: slot.axe, membres: draft.map(n => ({ prenom: n, nom: '' })) });
+            session = { groupId: out.groupId, pin: out.pin, axe: slot.axe, numero: out.numero };
+            store.set('pe_session', session);
+            present = draft.slice(); store.set('pe_present_' + session.groupId, present);
+            activeAuthor = present.length === 1 ? present[0] : null;
+            await loadGroup(); loadTimer();
+          }
           slot = null; editingPresent = false; step = 'work'; flash.travail = null;
-          if (out.created) toast('Groupe ouvert. Note bien ton code : ' + pin);
         } catch (e) {
           flash.travail = { type: 'error', text: e.message };
         }
@@ -767,7 +757,6 @@
       case 'leave-group':
         if (!confirm('Quitter ce groupe ? Pour le retrouver, il faudra son code (' + (session ? session.pin : '') + ').')) return;
         leaveGroup(); flash.travail = null;
-        try { await refreshSlots(); } catch (e) { /* ignore */ }
         return renderAll();
 
       case 'edit-members': {
@@ -850,6 +839,11 @@
         adminCode = null; adminData = null; exportResult = null;
         try { sessionStorage.removeItem('pe_admin'); } catch (e) { /* ignore */ }
         flash.admin = null; return renderAll();
+      case 'admin-del-contrib':
+        if (!confirm('Supprimer cette contribution ?')) return;
+        try { await apiPost({ action: 'pe_deleteContribution', code: adminCode, groupId: btn.dataset.gid, id: btn.dataset.id }); toast('Contribution supprimée'); await loadAdmin(); exportResult = null; }
+        catch (e) { flash.admin = { type: 'error', text: e.message }; }
+        return renderAll();
       case 'admin-del-group':
         if (!confirm('Supprimer définitivement ce groupe, toutes ses contributions et son PDF ?')) return;
         try { await apiPost({ action: 'pe_adminDeleteGroup', code: adminCode, groupId: btn.dataset.id }); toast('Groupe supprimé'); await loadAdmin(); }
@@ -875,6 +869,20 @@
     ev.preventDefault();
     const fd = new FormData(form);
     const submit = form.querySelector('[type="submit"]');
+
+    if (form.id === 'resumeForm') {
+      try {
+        const axe = Number(fd.get('axe')), numero = Number(fd.get('numero')), pin = String(fd.get('pin') || '').trim();
+        const out = await apiPost({ action: 'pe_joinOrCreate', resume: true, axe, numero, pin });
+        session = { groupId: out.groupId, pin, axe, numero };
+        store.set('pe_session', session);
+        present = store.get('pe_present_' + session.groupId, []);
+        await loadGroup(); loadTimer();
+        if (!present.length) { slot = { axe }; draft = []; editingPresent = true; step = 'who'; } else { step = 'work'; }
+        flash.travail = null;
+      } catch (e) { flash.travail = { type: 'error', text: e.message }; }
+      return renderAll();
+    }
 
     if (form.id === 'personForm') {
       const name = String(fd.get('nom') || '').trim().replace(/\s+/g, ' ');

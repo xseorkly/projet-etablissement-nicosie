@@ -86,6 +86,7 @@ function handlePE_(action, p, isGet) {
     lock.waitLock(25000);
     try {
       switch (action) {
+        case 'pe_createGroup': return peCreateGroup_(p);
         case 'pe_joinOrCreate': return peJoinOrCreate_(p);
         case 'pe_group': return peGroupData_(peAuth_(p));
         case 'pe_setMembers': return peSetMembers_(p);
@@ -282,10 +283,42 @@ function peGroupData_(g) {
 /* ---------- Groupes ---------- */
 
 /** Ouvre ou retrouve le groupe (axe, numéro). Création : un code est obligatoire et les 6 rubriques de la trame sont posées. */
+/** Reprise d'un groupe existant à partir de l'axe, du numéro et du code (ne crée jamais rien). */
+function peResume_(axe, numero, pinRaw) {
+  const key = 'pe_resumefail';
+  const cache = CacheService.getScriptCache();
+  const fails = Number(cache.get(key) || 0);
+  if (fails >= 30) throw new Error('Trop de tentatives. Réessayez dans quelques minutes.');
+  const g = peRead_('Groupes').filter(x => Number(x.axe) === axe && Number(x.numero) === numero)[0];
+  if (!g || !peNormPin_(pinRaw) || peNormPin_(pinRaw) !== peNormPin_(g.pin)) {
+    cache.put(key, String(fails + 1), 600);
+    throw new Error('Axe, numéro ou code incorrect.');
+  }
+  return { ok: true, created: false, groupId: g.id, numero: Number(g.numero), pin: g.pin };
+}
+
+/** Création d'un groupe : le serveur attribue le numéro et un code de reprise à 4 chiffres. */
+function peCreateGroup_(p) {
+  const axe = Number(p.axe);
+  if (!(axe >= 1 && axe <= 4)) throw new Error('Axe invalide.');
+  const nouveaux = peMembers_(p.membres);
+  if (!nouveaux.length) throw new Error('Indiquez au moins une personne devant l\'écran.');
+  const groupes = peRead_('Groupes').filter(g => Number(g.axe) === axe);
+  const numero = groupes.reduce((m, g) => Math.max(m, Number(g.numero) || 0), 0) + 1;
+  if (numero > 99) throw new Error('Nombre maximal de groupes atteint pour cet axe.');
+  const pin = String(Math.floor(1000 + Math.random() * 9000));
+  const now = peNow_();
+  const g = { id: peId_(), axe, numero, pin, membres: JSON.stringify(nouveaux), statut: 'En cours', creeLe: now, majLe: now, docUrl: '', docId: '', docLe: '' };
+  peAppend_('Groupes', g);
+  peAppendMany_('Rubriques', PE_TRAME.map((titre, i) => ({ id: peId_(), groupeId: g.id, ordre: i + 1, titre, auteur: 'Trame commune', creeLe: now })));
+  return { ok: true, created: true, groupId: g.id, numero, pin };
+}
+
 function peJoinOrCreate_(p) {
   const axe = Number(p.axe), numero = Number(p.numero);
+  if (p.resume) return peResume_(axe, numero, p.pin);
   if (!(axe >= 1 && axe <= 4)) throw new Error('Axe invalide.');
-  if (!(numero >= 1 && numero <= 30)) throw new Error('Numéro de groupe invalide.');
+  if (!(numero >= 1 && numero <= 99)) throw new Error('Numéro de groupe invalide.');
   const nouveaux = peMembers_(p.membres);
   if (!nouveaux.length) throw new Error('Indiquez au moins une personne devant l\'écran.');
   const pin = peNormPin_(p.pin);
