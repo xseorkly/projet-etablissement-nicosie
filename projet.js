@@ -559,7 +559,6 @@
           <div>
             <button class="pe-link" data-action="leave-group" type="button">← Quitter ce groupe</button>
             <h2>${h(groupLabel(g))}</h2>
-            <p class="pe-hint" style="margin:2px 0 6px">🔑 <b>Votre code de reprise</b> (autre ordinateur ou après fermeture) : <b>${h(session.pin)}</b>. Notez-le.</p>
             <p class="pe-lead" style="margin:0">${h(axeOf(g.axe).titre)}</p>
             <div class="pe-chips">${names}</div>
           </div>
@@ -568,11 +567,19 @@
             <button class="btn ghost small" data-action="edit-members" type="button">✏️ Corriger les noms</button>
           </div>
         </div>
+        <div class="pe-codecard">
+          <div class="pe-codecard-text">
+            <b>🔑 Notez votre code pour retrouver ce travail plus tard</b>
+            <span>Si vous fermez la page, ou pour continuer chez vous, revenez sur ce site, ouvrez « Reprendre un groupe déjà commencé » et tapez ce code :</span>
+          </div>
+          <div class="pe-codecard-code" id="peCode">${h(session.pin)}</div>
+          <button class="btn primary small" data-action="copy-code" type="button">📋 Copier le code</button>
+        </div>
         ${renderFlash('travail')}
         <div class="pe-axe-banner"><b>Axe ${h(g.axe)}</b> — ${h(axeOf(g.axe).titre)}</div>
         ${pdfBlock(false)}
         <details class="pe-method"><summary>🧭 Rappel : comment ça marche ?</summary>
-          <p class="pe-hint" style="margin:6px 0 0">Cliquez sur votre nom dans « Qui écrit ? », répondez aux questions de chaque point de la trame ou ajoutez une contribution libre, surveillez le minuteur (45 min), puis cliquez sur « Envoyer au Drive » en bas de page. Code de reprise : <b>${h(session.pin)}</b>.</p>
+          <p class="pe-hint" style="margin:6px 0 0">Cliquez sur votre nom dans « Qui écrit ? », répondez aux questions de chaque point de la trame ou ajoutez une contribution libre, surveillez le minuteur (45 min), puis cliquez sur « Envoyer au Drive » en bas de page. </p>
         </details>
         <div id="membersBox"></div>
         <div class="pe-sticky">
@@ -740,6 +747,10 @@
     const a = btn.dataset.action;
 
     switch (a) {
+      case 'copy-code':
+        try { await navigator.clipboard.writeText(session.pin); toast('Code copié : ' + session.pin); }
+        catch (e) { toast('Votre code : ' + session.pin); }
+        return;
       case 'refresh': return refresh(false);
       case 'print': return window.print();
 

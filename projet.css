@@ -138,3 +138,8 @@ textarea.pe-ta{min-height:84px;resize:vertical}
 .pe-axe-banner{margin:10px 0;padding:10px 14px;border-left:5px solid var(--magenta,#a3207a);background:#fbf9fc;border-radius:8px;font-size:1.05rem}
 @media (max-width:700px){.pe-pdf{height:380px}}
 @media print{.pe-pdf{display:none}}
+
+.pe-codecard{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:14px 0;padding:14px 18px;border:2px solid #e0a800;border-radius:14px;background:#fff8dc}
+.pe-codecard-text{flex:1 1 280px;display:flex;flex-direction:column;gap:4px}
+.pe-codecard-code{font-size:2rem;font-weight:800;letter-spacing:.18em;font-family:ui-monospace,Menlo,Consolas,monospace;padding:6px 16px;background:#fff;border:2px dashed #b88700;border-radius:10px;user-select:all}
+@media print{.pe-codecard{border-color:#000}}
