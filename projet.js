@@ -413,9 +413,7 @@
         <div class="pe-slots">${cards}</div>
         <details class="pe-method" style="margin-top:18px" ${flash.travail ? "open" : ""}><summary>🔑 Reprendre un groupe déjà commencé</summary>
           <form id="resumeForm" class="pe-row" autocomplete="off" style="margin-top:10px">
-            <label>Axe<select name="axe">${AXES.map(a => `<option value="${a.n}">Axe ${a.n}</option>`).join('')}</select></label>
-            <label>N° du groupe<input type="number" name="numero" min="1" max="99" required data-ignore-pending></label>
-            <label>Code de reprise<input type="text" name="pin" required maxlength="30" data-ignore-pending></label>
+            <label style="flex:1 1 220px">Code de reprise<input type="text" name="pin" required maxlength="30" autocapitalize="characters" data-ignore-pending placeholder="Ex. K7M2QX"></label>
             <button class="btn secondary" type="submit">Reprendre</button>
           </form>
         </details>
@@ -561,7 +559,7 @@
           <div>
             <button class="pe-link" data-action="leave-group" type="button">← Quitter ce groupe</button>
             <h2>${h(groupLabel(g))}</h2>
-            <p class="pe-hint" style="margin:2px 0 6px">🔑 <b>Pour reprendre plus tard</b> (autre ordinateur ou après fermeture) : axe ${h(g.axe)}, groupe n° ${h(g.numero)}, code <b>${h(session.pin)}</b>. Notez-le.</p>
+            <p class="pe-hint" style="margin:2px 0 6px">🔑 <b>Votre code de reprise</b> (autre ordinateur ou après fermeture) : <b>${h(session.pin)}</b>. Notez-le.</p>
             <p class="pe-lead" style="margin:0">${h(axeOf(g.axe).titre)}</p>
             <div class="pe-chips">${names}</div>
           </div>
@@ -906,8 +904,9 @@
 
     if (form.id === 'resumeForm') {
       try {
-        const axe = Number(fd.get('axe')), numero = Number(fd.get('numero')), pin = String(fd.get('pin') || '').trim();
-        const out = await apiPost({ action: 'pe_joinOrCreate', resume: true, axe, numero, pin });
+        const pin = String(fd.get('pin') || '').trim();
+        const out = await apiPost({ action: 'pe_joinOrCreate', resume: true, pin });
+        const axe = out.axe, numero = out.numero;
         session = { groupId: out.groupId, pin, axe, numero };
         store.set('pe_session', session);
         present = store.get('pe_present_' + session.groupId, []);
