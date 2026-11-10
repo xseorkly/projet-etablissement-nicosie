@@ -5,7 +5,7 @@
    * CONFIGURATION
    * ------------------------------------------------------------------ */
   // URL du déploiement Apps Script (Application Web) de CE site, à coller ici (voir CONFIGURATION.md).
-  const ENDPOINT = '';
+  const ENDPOINT = 'https://script.google.com/macros/s/AKfycbxC-ESk26sKN3rW9a3nJEwRwy3T8ROOTk7UdJKGaN6QYqIbbI5BNFwUWDNuH31p8mB5FA/exec';
 
   // Les 4 axes du projet d'établissement 2026-2030 (titres du document de méthode).
   const AXES = [
