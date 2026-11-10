@@ -14,6 +14,8 @@
     { n: 3, court: 'Sport, santé, bien-être et citoyenneté', titre: 'Sport, santé, bien-être et citoyenneté' },
     { n: 4, court: 'Construire ensemble l\'école de demain', titre: 'Construire ensemble l\'école de demain' }
   ];
+  const PDF_URL = 'assets/projet-etablissement-2026-2030.pdf';
+  const DRIVE_URL = 'https://drive.google.com/drive/folders/1JtXAPRibfLMAkrSsocTc8rLcPhhfkHUR';
   const GROUPS_PER_AXE = 5;       // nombre de groupes proposés par axe
   const MAX_PRESENT = 6;          // personnes max. devant un même écran
   const WORK_MINUTES = 45;        // durée d'une séquence de travail
@@ -367,6 +369,30 @@
       <p>L'objectif : faire émerger des propositions concrètes et réalistes. Vous pouvez écrire en français, en grec ou en anglais. Votre travail n'est visible que de votre groupe et de l'équipe de coordination.</p>
     </details>`;
 
+  const pdfBlock = (open, id) => `
+    <details class="pe-method" ${open ? 'open' : ''}><summary>📄 Projet d'établissement 2026-2030 — document de référence</summary>
+      <p class="pe-hint">Le document de méthode fourni par la direction. Consultez-le pendant votre travail.</p>
+      <div class="pe-actions" style="margin:6px 0 10px">
+        <a class="btn primary small" href="${PDF_URL}" download style="text-decoration:none">⬇ Télécharger le PDF</a>
+        <a class="btn ghost small" href="${PDF_URL}" target="_blank" rel="noopener" style="text-decoration:none">Ouvrir dans un nouvel onglet</a>
+      </div>
+      <iframe class="pe-pdf" title="Projet d'établissement 2026-2030" src="${PDF_URL}#view=FitH" loading="lazy"></iframe>
+      <p class="pe-hint">Si le document ne s'affiche pas dans le cadre (certains téléphones), utilisez les boutons ci-dessus.</p>
+    </details>`;
+
+  const TUTO = `
+    <details class="pe-method" open><summary>🧭 Comment ça marche ? (tutoriel)</summary>
+      <ol class="pe-tuto">
+        <li><b>Choisissez votre axe</b> en cliquant dessus : votre groupe est créé automatiquement.</li>
+        <li><b>Indiquez qui travaille sur cet ordinateur</b> : prénom, nom ou pseudonyme, comme vous préférez (jusqu'à 6 personnes).</li>
+        <li><b>Notez votre code de reprise</b>, affiché en haut de la page de travail : il permet de retrouver votre groupe plus tard ou depuis un autre ordinateur (« Reprendre un groupe déjà commencé » sur cette page).</li>
+        <li><b>Suivez la trame en 6 points</b> (diagnostic, objectif général, sous-objectifs, actions, indicateurs, critères d'évaluation). Répondez aux questions pour guider, ou ajoutez une contribution libre. Avant d'écrire, cliquez sur votre nom dans « Qui écrit ? ».</li>
+        <li><b>Gardez un œil sur le minuteur</b> : une séquence dure 45 minutes. Il vous prévient 5 minutes avant la fin, sans vous empêcher d'écrire.</li>
+        <li><b>Envoyez votre travail</b> avec « Envoyer au Drive » (vous pouvez le refaire autant de fois que vous voulez) et/ou imprimez-le.</li>
+      </ol>
+      <p class="pe-hint">Votre travail s'enregistre au fur et à mesure et n'est visible que de votre groupe et de l'équipe de coordination.</p>
+    </details>`;
+
   /* Étape 1 : choisir l'axe (le groupe est créé automatiquement) */
   function renderChooser() {
     const cards = AXES.map(a => `
@@ -381,7 +407,9 @@
         <h2>Sur quel axe travaillez-vous ?</h2>
         <p class="pe-lead">Cliquez sur votre axe : votre groupe est créé automatiquement. Vous indiquerez ensuite qui travaille sur cet ordinateur.</p>
         ${renderFlash('travail')}
-        ${METHODE}
+        ${TUTO}
+        ${pdfBlock(true)}
+        <h3 style="margin-top:18px">Choisissez votre axe</h3>
         <div class="pe-slots">${cards}</div>
         <details class="pe-method" style="margin-top:18px" ${flash.travail ? "open" : ""}><summary>🔑 Reprendre un groupe déjà commencé</summary>
           <form id="resumeForm" class="pe-row" autocomplete="off" style="margin-top:10px">
@@ -543,6 +571,11 @@
           </div>
         </div>
         ${renderFlash('travail')}
+        <div class="pe-axe-banner"><b>Axe ${h(g.axe)}</b> — ${h(axeOf(g.axe).titre)}</div>
+        ${pdfBlock(false)}
+        <details class="pe-method"><summary>🧭 Rappel : comment ça marche ?</summary>
+          <p class="pe-hint" style="margin:6px 0 0">Cliquez sur votre nom dans « Qui écrit ? », répondez aux questions de chaque point de la trame ou ajoutez une contribution libre, surveillez le minuteur (45 min), puis cliquez sur « Envoyer au Drive » en bas de page. Code de reprise : <b>${h(session.pin)}</b>.</p>
+        </details>
         <div id="membersBox"></div>
         <div class="pe-sticky">
           <div class="pe-timer" id="peTimer">${timerHTML()}</div>
@@ -657,6 +690,7 @@
         <div class="pe-ws-head"><div><h2>🔐 Administration</h2>
           <p class="pe-lead" style="margin:0">${groupes.length} groupe${groupes.length > 1 ? 's' : ''} · ${contributions.length} contribution${contributions.length > 1 ? 's' : ''}. Tout ce que les groupes saisissent apparaît ici, par axe.</p></div>
           <div class="pe-actions" style="margin-top:0">
+            <a class="btn secondary small" href="${DRIVE_URL}" target="_blank" rel="noopener" style="text-decoration:none">📁 Ouvrir le dossier Drive</a>
             <button class="btn ghost small" data-action="refresh" type="button">↻ Actualiser</button>
             <button class="btn ghost small" data-action="admin-logout" type="button">Se déconnecter</button></div></div>
         ${renderFlash('admin')}
