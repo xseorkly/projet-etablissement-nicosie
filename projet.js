@@ -356,6 +356,10 @@
   function renderTravail() {
     const root = $('#view-travail');
     if (step === 'work' && session && grp && present.length) { root.innerHTML = renderWorkspace(); return; }
+    if (step === 'work' && session && grp && !present.length) {
+      slot = { axe: session.axe }; draft = []; editingPresent = true; step = 'who';
+      root.innerHTML = renderWho(); return;
+    }
     if (step === 'work' && session) { root.innerHTML = '<div class="pe-card"><div class="pe-empty">Chargement de ton groupe…</div></div>'; return; }
     if (step === 'who' && slot) { root.innerHTML = renderWho(); return; }
     step = 'choose';
@@ -814,10 +818,19 @@
         return;
       }
       case 'save-members': {
-        const membres = $('#membersTa').value.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 15).map(n => ({ prenom: n, nom: '' }));
-        const out = await act(gp({ action: 'pe_setMembers', membres }), 'Participants mis à jour', 'travail');
-        if (out) { present = present.filter(n => membres.some(m => sameName(m.prenom, n))); store.set('pe_present_' + session.groupId, present); }
-        return;
+        const noms = $('#membersTa').value.split('\n').map(l => l.trim().replace(/\s+/g, ' ')).filter(Boolean).slice(0, 15);
+        if (!noms.length) { toast('Indiquez au moins un nom.'); return; }
+        btn.disabled = true;
+        try {
+          await apiPost(gp({ action: 'pe_setMembers', membres: noms.map(n => ({ prenom: n, nom: '' })) }));
+          present = noms.slice(0, MAX_PRESENT);
+          store.set('pe_present_' + session.groupId, present);
+          if (!present.includes(activeAuthor) && activeAuthor !== GROUP_AUTHOR) activeAuthor = present.length === 1 ? present[0] : null;
+          flash.travail = null;
+          await loadGroup();
+          toast('Noms mis à jour');
+        } catch (e) { flash.travail = { type: 'error', text: e.message }; toast('⚠️ ' + e.message); }
+        return renderAll();
       }
 
       /* ----- contributions ----- */
